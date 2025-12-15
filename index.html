@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ribab | VFX & AI</title>
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;500;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+
+    <style>
+        /* --- CSS VARIABLES --- */
+        :root {
+            --bg-color: #050505;
+            --text-main: #ffffff;
+            --text-muted: #888888;
+            --border: #333333;
+            --font-head: 'Space Grotesk', sans-serif;
+            --font-code: 'JetBrains Mono', monospace;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            font-family: var(--font-head);
+            overflow-x: hidden;
+            overflow-y: hidden; /* Lock scroll during load */
+        }
+
+        body.loaded {
+            overflow-y: auto; /* Unlock scroll after load */
+        }
+
+        /* --- LOADING SCREEN --- */
+        #loader {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: #000;
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            transition: opacity 0.5s ease; /* Fast fade out */
+        }
+
+        .loader-text {
+            position: absolute;
+            font-family: var(--font-code);
+            font-size: 0.9rem;
+            color: var(--text-main);
+            letter-spacing: 2px;
+            margin-top: 20px;
+            z-index: 10;
+        }
+
+        /* --- MAIN SITE CONTENT --- */
+        #content {
+            opacity: 0;
+            transition: opacity 1s ease;
+        }
+        
+        #canvas-bg {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            z-index: -1;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 0 2rem;
+            position: relative;
+            z-index: 1;
+        }
+
+        /* --- NAVIGATION --- */
+        nav {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 2rem 0;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .logo { font-weight: 700; font-size: 1.5rem; letter-spacing: -1px; }
+        .contact-link { 
+            font-family: var(--font-code); 
+            font-size: 0.85rem; 
+            text-decoration: none; 
+            color: var(--text-muted);
+            border: 1px solid #333;
+            padding: 8px 16px;
+            border-radius: 4px;
+            transition: 0.3s;
+        }
+        .contact-link:hover { border-color: #fff; color: #fff; background: rgba(255,255,255,0.05); }
+
+        /* --- HERO SECTION --- */
+        .hero {
+            min-height: 80vh;
+            display: grid;
+            grid-template-columns: 1.2fr 0.8fr;
+            align-items: center;
+            gap: 4rem;
+        }
+
+        h1 {
+            font-size: 4.5rem;
+            line-height: 1;
+            margin-bottom: 1.5rem;
+            letter-spacing: -2px;
+            font-weight: 500;
+        }
+
+        .subtitle {
+            font-family: var(--font-code);
+            font-size: 0.95rem;
+            color: var(--text-muted);
+            line-height: 1.8;
+            margin-bottom: 2rem;
+            max-width: 90%;
+        }
+
+        /* PROFILE FRAME (REDUCED SIZE) */
+        .profile-frame {
+            width: 100%;
+            aspect-ratio: 1/1;
+            max-width: 300px; /* Reduced from 400px */
+            border: 1px solid var(--border);
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #0a0a0a;
+            margin: 0 auto; /* Center it */
+        }
+        
+        .profile-frame::before, .profile-frame::after {
+            content: ''; position: absolute; width: 10px; height: 10px; border: 1px solid #fff; transition: 0.5s;
+        }
+        .profile-frame::before { top: -1px; left: -1px; border-right: 0; border-bottom: 0; }
+        .profile-frame::after { bottom: -1px; right: -1px; border-left: 0; border-top: 0; }
+
+        .profile-img {
+            width: 100%; height: 100%; object-fit: cover; opacity: 0.8; filter: grayscale(100%); transition: 0.5s;
+        }
+        .profile-frame:hover .profile-img { filter: grayscale(0%); opacity: 1; }
+
+        /* --- TECH STACK --- */
+        .tech-section { margin-bottom: 6rem; }
+        .section-label {
+            font-family: var(--font-code);
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            letter-spacing: 1px;
+            margin-bottom: 2rem;
+            display: block;
+        }
+
+        .tech-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        .tech-pill {
+            border: 1px solid var(--border);
+            padding: 10px 20px;
+            font-family: var(--font-code);
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            transition: 0.3s;
+            background: rgba(255,255,255,0.02);
+        }
+        .tech-pill:hover {
+            border-color: #fff;
+            color: #fff;
+            transform: translateY(-2px);
+        }
+
+        /* --- WORK GRID --- */
+        .grid-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+            padding-bottom: 4rem;
+        }
+        .work-card {
+            border-top: 1px solid var(--border);
+            padding-top: 1rem;
+        }
+        .work-card h3 { font-size: 1.5rem; margin-bottom: 0.5rem; font-weight: 500; }
+        .work-card p { color: var(--text-muted); font-size: 0.9rem; line-height: 1.6; }
+
+        /* MOBILE */
+        @media (max-width: 768px) {
+            .hero { grid-template-columns: 1fr; gap: 3rem; text-align: left; }
+            h1 { font-size: 3rem; }
+            .profile-frame { width: 80%; max-width: 250px; }
+            .grid-2 { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+
+    <div id="loader">
+        <canvas id="loader-canvas" style="position: absolute; top:0; left:0; width:100%; height:100%;"></canvas>
+        <div class="loader-text" id="loading-msg">> INITIALIZING...</div>
+    </div>
+
+    <canvas id="canvas-bg"></canvas>
+
+    <div id="content">
+        <div class="container">
+            <nav>
+                <div class="logo">RIBAB.</div>
+                <a href="mailto:your-email@gmail.com" class="contact-link">Get in Touch</a>
+            </nav>
+
+            <section class="hero">
+                <div class="hero-text">
+                    <h1>Visual Data<br>Architect.</h1>
+                    <p class="subtitle">
+                        <span style="color: #fff;">// RIBAB SYSTEMS: ONLINE</span><br><br>
+                        Specialized in VFX Compositing and Generative Model Training. 
+                        I build the datasets that teach AI how to see.
+                    </p>
+                </div>
+                <div class="profile-frame">
+                    <span style="color: #333; font-family: var(--font-code);">[ IMAGE INPUT ]</span>
+                </div>
+            </section>
+
+            <section class="tech-section">
+                <span class="section-label">01 // TECHNICAL ARSENAL</span>
+                <div class="tech-grid">
+                    <div class="tech-pill">Nuke</div>
+                    <div class="tech-pill">Houdini</div>
+                    <div class="tech-pill">Python</div>
+                    <div class="tech-pill">Stable Diffusion</div>
+                    <div class="tech-pill">PyTorch</div>
+                    <div class="tech-pill">RLHF</div>
+                    <div class="tech-pill">Linux</div>
+                    <div class="tech-pill">Unreal Engine</div>
+                </div>
+            </section>
+
+            <section>
+                <span class="section-label">02 // SELECTED PROTOCOLS</span>
+                <div class="grid-2">
+                    <div class="work-card">
+                        <h3>VFX Pipeline Integration</h3>
+                        <p>Developed custom Python tools to integrate Generative AI texture generation directly into Nuke compositing workflows.</p>
+                    </div>
+                    <div class="work-card">
+                        <h3>Dataset Curation</h3>
+                        <p>Managed a 50k+ image dataset for training a custom LoRA model focused on photorealistic sci-fi environments.</p>
+                    </div>
+                </div>
+            </section>
+
+            <footer style="padding: 4rem 0; border-top: 1px solid var(--border); color: #444; font-size: 0.8rem; font-family: var(--font-code);">
+                RIBAB SYSTEMS © 2025
+            </footer>
+        </div>
+    </div>
+
+    <script>
+        /* --- 1. THE SINGULARITY LOADER (2.5 Seconds) --- */
+        const lCanvas = document.getElementById('loader-canvas');
+        const lCtx = lCanvas.getContext('2d');
+        const loaderDiv = document.getElementById('loader');
+        const contentDiv = document.getElementById('content');
+        const body = document.body;
+
+        let w, h;
+        let lStars = [];
+        let frameCount = 0;
+        let collapsing = false;
+
+        function initLoader() {
+            w = window.innerWidth;
+            h = window.innerHeight;
+            lCanvas.width = w;
+            lCanvas.height = h;
+
+            // Create initial stars
+            lStars = [];
+            for (let i = 0; i < 400; i++) {
+                lStars.push({
+                    x: Math.random() * w,
+                    y: Math.random() * h,
+                    size: Math.random() * 2,
+                    speed: Math.random() * 0.9 + 0.9 // Drift speed
+                });
+            }
+        }
+
+        function drawLoader() {
+            // Trail effect (fades previous frames)
+            lCtx.fillStyle = 'rgba(0, 0, 0, 0.2)'; 
+            lCtx.fillRect(0, 0, w, h);
+
+            lCtx.fillStyle = '#ffffff';
+            
+            const centerX = w / 2;
+            const centerY = h / 2;
+
+            for (let star of lStars) {
+                if (collapsing) {
+                    // SINGULARITY LOGIC: Move rapidly to center
+                    // Easing formula: (Target - Current) * Factor
+                    star.x += (centerX - star.x) * 0.15; 
+                    star.y += (centerY - star.y) * 0.15;
+                    
+                    // Streak effect when moving fast
+                    lCtx.beginPath();
+                    lCtx.strokeStyle = "rgba(255,255,255,0.5)";
+                    lCtx.lineWidth = star.size;
+                    lCtx.moveTo(star.x, star.y);
+                    // Draw tail away from center
+                    lCtx.lineTo(star.x - (centerX - star.x)*0.2, star.y - (centerY - star.y)*0.2);
+                    lCtx.stroke();
+                } else {
+                    // DRIFT LOGIC (Before collapse)
+                    star.y -= star.speed; // Float up slightly
+                    if (star.y < 0) star.y = h;
+                    
+                    lCtx.beginPath();
+                    lCtx.arc(star.x, star.y, star.size, 0, Math.PI * 2);
+                    lCtx.fill();
+                }
+            }
+
+            frameCount++;
+            
+            // TIMELINE:
+            // 0 -> 80 frames (approx 1.3s): Drift
+            // 80 frames: Trigger Collapse
+            // 140 frames (approx 2.3s): Reveal Site
+            
+            if (frameCount === 80) {
+                collapsing = true;
+                document.getElementById('loading-msg').style.opacity = '0'; // Hide text
+            }
+            
+            if (frameCount < 140) {
+                requestAnimationFrame(drawLoader);
+            } else {
+                finishLoading();
+            }
+        }
+
+        function finishLoading() {
+            // Flash effect
+            loaderDiv.style.background = '#fff';
+            
+            setTimeout(() => {
+                loaderDiv.style.opacity = '0';
+                contentDiv.style.opacity = '1';
+                body.classList.add('loaded'); // Unlock scroll
+                setTimeout(() => { loaderDiv.style.display = 'none'; }, 500);
+            }, 100);
+        }
+
+        /* --- 2. MAIN SITE BACKGROUND (Subtle Floating Particles) --- */
+        const bgCanvas = document.getElementById('canvas-bg');
+        const bgCtx = bgCanvas.getContext('2d');
+        
+        bgCanvas.width = window.innerWidth;
+        bgCanvas.height = window.innerHeight;
+        
+        let particles = [];
+        for(let i=0; i<60; i++) particles.push({
+            x: Math.random()*window.innerWidth, 
+            y: Math.random()*window.innerHeight,
+            vx: (Math.random()-0.5)*0.3,
+            vy: (Math.random()-0.5)*0.3
+        });
+
+        function drawBg() {
+            bgCtx.clearRect(0,0, bgCanvas.width, bgCanvas.height);
+            bgCtx.fillStyle = "#333";
+            for(let p of particles) {
+                p.x += p.vx; p.y += p.vy;
+                if(p.x < 0 || p.x > bgCanvas.width) p.vx *= -1;
+                if(p.y < 0 || p.y > bgCanvas.height) p.vy *= -1;
+                bgCtx.beginPath();
+                bgCtx.arc(p.x, p.y, 1.5, 0, Math.PI*2);
+                bgCtx.fill();
+            }
+            requestAnimationFrame(drawBg);
+        }
+
+        // START
+        initLoader();
+        drawLoader();
+        drawBg();
+        
+        window.addEventListener('resize', () => {
+            initLoader();
+            bgCanvas.width = window.innerWidth;
+            bgCanvas.height = window.innerHeight;
+        });
+
+    </script>
+</body>
+</html>
